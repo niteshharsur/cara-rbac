@@ -1,0 +1,79 @@
+version: '3.9'
+# Local all-in-one development stack
+# Run: docker-compose -f docker-compose.dev.yml up
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: cara_rbac
+      POSTGRES_USER: cara
+      POSTGRES_PASSWORD: cara_dev_secret
+    ports: ["5432:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/cara_dev_secret
+    ports: ["7474:7474", "7687:7687"]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+    ports: ["9092:9092"]
+    depends_on: [zookeeper]
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      POSTGRES_URL: postgresql://cara:cara_dev_secret@postgres:5432/cara_rbac?sslmode=disable
+      PORT: 8080
+    volumes:
+      - ./frontend:/frontend
+    depends_on:
+      - postgres
+
+  graph-svc:
+    build:
+      context: ./backend/graph-svc
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      POSTGRES_URL: postgresql://cara:cara_dev_secret@postgres:5432/cara_rbac?sslmode=disable
+      NEO4J_URL: bolt://neo4j:cara_dev_secret@neo4j:7687
+      PORT: 8082
+    depends_on:
+      - postgres
+      - neo4j
+
+  runtime-monitor:
+    build:
+      context: ./backend/runtime-monitor
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      POSTGRES_URL: postgresql://cara:cara_dev_secret@postgres:5432/cara_rbac?sslmode=disable
+      PORT: 8081
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+

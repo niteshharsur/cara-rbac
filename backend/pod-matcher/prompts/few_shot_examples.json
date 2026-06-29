@@ -1,0 +1,50 @@
+[
+  {
+    "user": "Pod name: api-server\nNamespace: production\nImage: gcr.io/my-org/api-server:v2.1.0\nENTRYPOINT: [\"/app/api-server\"]\nCMD: []\n\nRepository source files:\n  - cmd/api-server/main.go\n  - cmd/worker/main.go\n  - internal/handler/http.go\n  - internal/service/user.go\n  - pkg/db/postgres.go\n\nIdentify the main entry point source file for this pod.",
+    "assistant": {
+      "pod_name": "api-server",
+      "image_ref": "gcr.io/my-org/api-server:v2.1.0",
+      "main_executable": "/app/api-server",
+      "entry_point_file": "cmd/api-server/main.go",
+      "language": "go",
+      "confidence": 0.97,
+      "reasoning": "The ENTRYPOINT is /app/api-server which is the compiled binary from cmd/api-server/main.go — the directory name matches the binary name exactly, a standard Go convention."
+    }
+  },
+  {
+    "user": "Pod name: celery-worker\nNamespace: data-pipeline\nImage: docker.io/myorg/celery-worker:latest\nENTRYPOINT: [\"celery\"]\nCMD: [\"-A\", \"tasks.app\", \"worker\", \"--loglevel=info\"]\n\nRepository source files:\n  - tasks/app.py\n  - tasks/jobs/ingest.py\n  - tasks/jobs/transform.py\n  - api/server.py\n  - api/models.py\n  - manage.py\n\nIdentify the main entry point source file for this pod.",
+    "assistant": {
+      "pod_name": "celery-worker",
+      "image_ref": "docker.io/myorg/celery-worker:latest",
+      "main_executable": "celery",
+      "entry_point_file": "tasks/app.py",
+      "language": "python",
+      "confidence": 0.95,
+      "reasoning": "CMD passes '-A tasks.app' to celery, which means the Celery application object is defined in tasks/app.py. This is the standard Celery module path convention."
+    }
+  },
+  {
+    "user": "Pod name: spring-backend\nNamespace: ecommerce\nImage: registry.example.com/ecommerce/backend:3.4.1\nENTRYPOINT: [\"java\"]\nCMD: [\"-jar\", \"/app/backend.jar\"]\n\nRepository source files:\n  - src/main/java/com/example/BackendApplication.java\n  - src/main/java/com/example/controller/OrderController.java\n  - src/main/java/com/example/service/OrderService.java\n  - src/test/java/com/example/BackendApplicationTest.java\n  - pom.xml\n  - Dockerfile\n\nIdentify the main entry point source file for this pod.",
+    "assistant": {
+      "pod_name": "spring-backend",
+      "image_ref": "registry.example.com/ecommerce/backend:3.4.1",
+      "main_executable": "java -jar /app/backend.jar",
+      "entry_point_file": "src/main/java/com/example/BackendApplication.java",
+      "language": "java",
+      "confidence": 0.93,
+      "reasoning": "Standard Spring Boot convention: the class containing @SpringBootApplication and the main() method is named BackendApplication.java in the root package. The jar name 'backend.jar' confirms this is the backend service."
+    }
+  },
+  {
+    "user": "Pod name: nginx-proxy\nNamespace: ingress\nImage: nginx:1.25-alpine\nENTRYPOINT: [\"/docker-entrypoint.sh\"]\nCMD: [\"nginx\", \"-g\", \"daemon off;\"]\n\nRepository source files:\n  - nginx/nginx.conf\n  - nginx/conf.d/default.conf\n  - scripts/entrypoint.sh\n  - helm/templates/deployment.yaml\n\nIdentify the main entry point source file for this pod.",
+    "assistant": {
+      "pod_name": "nginx-proxy",
+      "image_ref": "nginx:1.25-alpine",
+      "main_executable": "nginx",
+      "entry_point_file": "nginx/nginx.conf",
+      "language": "unknown",
+      "confidence": 0.55,
+      "reasoning": "This is a stock nginx image with no application source code — the 'program' is the nginx configuration. Confidence is low because there is no source code entry point to analyze; M3 static analysis will have no call graph to produce."
+    }
+  }
+]

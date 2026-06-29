@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cara-rbac
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cara-rbac-collector
+  namespace: cara-rbac

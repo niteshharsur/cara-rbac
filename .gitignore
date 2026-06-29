@@ -1,0 +1,37 @@
+# Go
+*.exe
+*.test
+vendor/
+bin/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+dist/
+*.egg-info/
+
+# Node / React
+node_modules/
+.next/
+dist/
+build/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Secrets
+*.pem
+*.key
+kubeconfig*
+*secret*
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

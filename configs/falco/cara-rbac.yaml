@@ -1,0 +1,11 @@
+# CARA-RBAC Falco rules
+- rule: Unexpected K8s API Call from Pod
+  desc: Detects API calls not observed during static analysis
+  condition: >
+    ka.target.resource in (secrets, pods, deployments) and
+    not ka.user.name startswith 'system:'
+  output: >
+    Unexpected API call (user=%ka.user.name verb=%ka.verb
+    resource=%ka.target.resource ns=%ka.target.namespace)
+  priority: WARNING
+  tags: [cara-rbac, k8s-rbac]

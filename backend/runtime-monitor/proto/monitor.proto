@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package monitor;
+
+option go_package = "cara-rbac/runtime-monitor/proto;monitor";
+
+service RuntimeMonitor {
+  rpc RecordEvent (EventRequest) returns (EventResponse);
+}
+
+message EventRequest {
+  string scan_id = 1;
+  string pod_name = 2;
+  string namespace = 3;
+  string verb = 4;
+  string resource = 5;
+  string api_group = 6;
+  bool is_startup = 7;
+}
+
+message EventResponse {
+  bool success = 1;
+  string error_message = 2;
+}

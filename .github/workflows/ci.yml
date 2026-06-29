@@ -1,0 +1,55 @@
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-go:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, rbac-analyzer, cluster-collector, runtime-monitor, minimizer, graph-svc]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Build
+        run: go build ./...
+        working-directory: backend/${{ matrix.service }}
+      - name: Test
+        run: go test ./...
+        working-directory: backend/${{ matrix.service }}
+
+  build-python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [pod-matcher, behavior-analyzer, fp-engine]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install -e '.[dev]'
+        working-directory: backend/${{ matrix.service }}
+      - name: Test
+        run: pytest
+        working-directory: backend/${{ matrix.service }}
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install
+        run: npm ci
+        working-directory: frontend/dashboard
+      - name: Build
+        run: npm run build
+        working-directory: frontend/dashboard

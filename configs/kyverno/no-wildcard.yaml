@@ -1,0 +1,13 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: cara-rbac-no-wildcard
+spec:
+  validationFailureAction: Audit
+  rules:
+    - name: deny-wildcard-verbs
+      match:
+        resources:
+          kinds: [ClusterRole, Role]
+      validate:
+        message: "Wildcard verbs (*) are not allowed in minimized RBAC"

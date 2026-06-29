@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CARA-RBAC | Context-Aware RBAC Minimization</title>
+  <link rel="stylesheet" href="/style.css">
+  <!-- D3.js for Graph Visualisation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <!-- Chart.js for stats charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- AUTH SECTION (REGISTER & LOGIN) -->
+  <div id="auth-section" class="auth-wrapper">
+    <div class="glass-panel auth-card">
+      <div class="auth-header">
+        <div class="logo-icon" style="margin: 0 auto;">C</div>
+        <h2>CARA-RBAC</h2>
+        <p id="auth-mode-subtitle" style="color: var(--text-muted); margin-top: 0.5rem;">Access the security console</p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" class="form-control" placeholder="engineer@cara.dev" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+          New to CARA? <a href="#" id="toggle-register" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">Create account</a>
+        </p>
+      </form>
+
+      <!-- Register Form (Hidden by default) -->
+      <form id="register-form" style="display: none;">
+        <div class="form-group">
+          <label for="reg-email">Email Address</label>
+          <input type="email" id="reg-email" class="form-control" placeholder="engineer@cara.dev" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Password</label>
+          <input type="password" id="reg-password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-role">Role</label>
+          <select id="reg-role" class="form-control">
+            <option value="viewer">Viewer</option>
+            <option value="engineer" selected>Engineer</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Register</button>
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+          Already have an account? <a href="#" id="toggle-login" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">Sign in</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APPLICATION LAYOUT (HIDDEN UNTIL AUTHENTICATED) -->
+  <div id="app-section" class="app-container" style="display: none;">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div>
+        <div class="logo-container">
+          <div class="logo-icon">C</div>
+          <span class="logo-text">CARA-RBAC</span>
+        </div>
+        <nav class="nav-list">
+          <a class="nav-item active" data-view="scans-list-view">
+            <span>📋</span> Scans Manager
+          </a>
+          <a class="nav-item" id="nav-scan-details" data-view="scan-details-view" style="display: none;">
+            <span>🛡️</span> Scan Report
+          </a>
+          <a class="nav-item" id="nav-graph-view" data-view="graph-analysis-view" style="display: none;">
+            <span>🕸️</span> Graph Analysis
+          </a>
+          <a class="nav-item" id="nav-minimizer-view" data-view="rbac-minimizer-view" style="display: none;">
+            <span>⚡</span> RBAC Minimizer
+          </a>
+        </nav>
+      </div>
+
+      <div class="user-widget">
+        <div class="user-avatar" id="widget-avatar">U</div>
+        <div class="user-info">
+          <span class="user-name" id="widget-username">User</span>
+          <span class="user-role" id="widget-userrole">Viewer</span>
+        </div>
+        <a href="#" id="logout-btn" style="color: var(--accent-danger); margin-left: auto; text-decoration: none; font-size: 1.25rem;">🚪</a>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- VIEW: SCANS LIST -->
+      <section id="scans-list-view" class="view-section active">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+          <div>
+            <h1>Scans Manager</h1>
+            <p style="color: var(--text-muted); margin-top: 0.25rem;">Trigger and audit Kubenetes namespace security scans</p>
+          </div>
+          <button class="btn btn-primary" id="btn-new-scan">+ New Scan</button>
+        </div>
+
+        <!-- Create Scan Dialog (Hidden by default) -->
+        <div id="new-scan-panel" class="glass-panel" style="display: none; padding: 2rem; margin-bottom: 2rem; border-color: var(--accent-primary);">
+          <div class="card-header">
+            <h3 class="card-title">Initiate Namespace Scan</h3>
+            <button class="btn btn-secondary" id="btn-cancel-new-scan" style="padding: 0.4rem 0.8rem;">Cancel</button>
+          </div>
+          <form id="new-scan-form" class="dashboard-grid" style="margin-top: 0; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+            <div class="form-group">
+              <label>Application ID (UUID)</label>
+              <input type="text" id="scan-app-id" class="form-control" value="11111111-1111-1111-1111-111111111111" required>
+            </div>
+            <div class="form-group">
+              <label>Scan Mode</label>
+              <select id="scan-mode" class="form-control">
+                <option value="pre_deployment">Pre-Deployment (Static)</option>
+                <option value="hybrid" selected>Hybrid (Static + Runtime)</option>
+                <option value="runtime_only">Runtime Only</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Source Repo URL</label>
+              <input type="text" id="scan-repo-url" class="form-control" placeholder="https://github.com/org/repo">
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+              <button type="submit" class="btn btn-primary btn-block">Launch Scan Pipeline</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="glass-panel" style="padding: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title">Recent Scans</h3>
+            <button class="btn btn-secondary" id="btn-refresh-scans">Refresh</button>
+          </div>
+          <div class="table-container">
+            <table class="custom-table" id="scans-table">
+              <thead>
+                <tr>
+                  <th>Scan ID</th>
+                  <th>App ID</th>
+                  <th>Mode</th>
+                  <th>Status</th>
+                  <th>Created At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="scans-list-body">
+                <!-- Dynamic Content -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: SCAN REPORT / DETAILS -->
+      <section id="scan-details-view" class="view-section">
+        <div style="margin-bottom: 2rem;">
+          <h1 id="details-title">Scan Details</h1>
+          <p id="details-subtitle" style="color: var(--text-muted); margin-top: 0.25rem;">Inspecting parsed & classified RBAC permissions</p>
+        </div>
+
+        <!-- Stats Cards Grid -->
+        <div class="dashboard-grid" style="margin-top: 0; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+          <div class="glass-panel stat-card" style="border-left: 4px solid var(--accent-primary);">
+            <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: var(--accent-primary);">📊</div>
+            <div>
+              <div class="stat-value" id="stat-risk-score">0.0</div>
+              <div class="stat-label">App Risk Score</div>
+            </div>
+          </div>
+          <div class="glass-panel stat-card">
+            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: var(--accent-danger);">⚠️</div>
+            <div>
+              <div class="stat-value" id="stat-cep">0</div>
+              <div class="stat-label">Confirmed Excess (CEP)</div>
+            </div>
+          </div>
+          <div class="glass-panel stat-card">
+            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: var(--accent-warning);">⚡</div>
+            <div>
+              <div class="stat-value" id="stat-sfp">0</div>
+              <div class="stat-label">Static FPs (SFP)</div>
+            </div>
+          </div>
+          <div class="glass-panel stat-card">
+            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-success);">🛡️</div>
+            <div>
+              <div class="stat-value" id="stat-rp">0</div>
+              <div class="stat-label">Required (RP / SOP)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+          <!-- Classifications List -->
+          <div class="glass-panel" style="padding: 1.5rem;">
+            <div class="card-header">
+              <h3 class="card-title">Privilege Classifications & Threat Scoring</h3>
+            </div>
+            <div class="table-container">
+              <table class="custom-table" id="classifications-table" style="min-width: 1100px;">
+                <thead>
+                  <tr>
+                    <th style="width: 25%;">Permission</th>
+                    <th style="width: 10%;">Class</th>
+                    <th style="width: 10%;">Confidence</th>
+                    <th style="width: 10%;">Threat Score</th>
+                    <th style="width: 30%;">Rationale</th>
+                    <th style="width: 15%;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="classifications-body">
+                  <!-- Dynamic Content -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Chart Breakdown Card -->
+          <div class="glass-panel" style="padding: 1.5rem; height: fit-content; overflow-x: auto;">
+            <div class="card-header">
+              <h3 class="card-title">Classification Ratio</h3>
+            </div>
+            <div style="position: relative; height: 220px; width: 100%; min-width: 220px; margin: 1.5rem auto;">
+              <canvas id="ratio-chart"></canvas>
+            </div>
+            <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
+              <strong>CEP</strong>: Excess permissions to remove.<br>
+              <strong>SFP</strong>: Code paths identified but uncalled at runtime.<br>
+              <strong>RP</strong>: Verified required permissions.
+            </div>
+          </div>
+        </div>
+
+        <!-- Falco / Audit Logs Viewer -->
+        <div class="glass-panel" style="padding: 1.5rem; margin-top: 2rem;">
+          <div class="card-header">
+            <h3 class="card-title">Real-Time Threat Detection Log (Falco & Audit Streams)</h3>
+            <span class="badge badge-success" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-success);">Watching Live</span>
+          </div>
+          <div id="falco-log-container" style="height: 180px; overflow-y: auto; background: rgba(0,0,0,0.3); font-family: monospace; padding: 1rem; border-radius: 4px; color: #a3e635; line-height: 1.6; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05); margin-top: 1rem;">
+            [Info] Listening for live system calls and cluster audit events...
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: GRAPH ANALYSIS -->
+      <section id="graph-analysis-view" class="view-section">
+        <div style="margin-bottom: 2rem;">
+          <h1>Graph Analysis & Blast Radius</h1>
+          <p style="color: var(--text-muted); margin-top: 0.25rem;">Explore privileges and escalation paths synced to Neo4j</p>
+        </div>
+
+        <div class="dashboard-grid" style="grid-template-columns: 3fr 1fr; margin-top: 0;">
+          <!-- Interactive SVG D3 Canvas -->
+          <div class="glass-panel" style="padding: 1.5rem;">
+            <div class="card-header">
+              <h3 class="card-title">Escalation and Escaping Linkages Map</h3>
+              <button class="btn btn-secondary" id="btn-sync-graph" style="padding: 0.4rem 0.8rem;">Sync to Neo4j</button>
+            </div>
+            <div class="graph-container">
+              <svg id="d3-graph" class="graph-svg"></svg>
+            </div>
+          </div>
+
+          <!-- Graph Legend / Details panel -->
+          <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column;">
+            <div class="card-header">
+              <h3 class="card-title">Graph Node Selector</h3>
+            </div>
+            <div id="node-details-panel" style="flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; color: var(--text-muted);">
+              Hover over a node to see detailed linkages, privileges, and potential privilege escalation paths.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: RBAC MINIMIZER -->
+      <section id="rbac-minimizer-view" class="view-section">
+        <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h1>RBAC Minimization Engine</h1>
+            <p style="color: var(--text-muted); margin-top: 0.25rem;">Preview original manifests vs. optimized minimal permissions ($P_{min}$)</p>
+          </div>
+          <div style="display: flex; gap: 0.75rem;">
+            <button class="btn btn-secondary" id="btn-download-rollback">Download Rollback Script</button>
+            <button class="btn btn-primary" id="btn-apply-cluster">Apply Minimized Manifest</button>
+          </div>
+        </div>
+
+        <!-- Minimization Metadata (Validation + Split SA suggestions) -->
+        <div class="glass-panel" id="minimization-meta-panel" style="padding: 1.5rem; margin-bottom: 2rem; display: none; border-color: rgba(99, 102, 241, 0.4);">
+          <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+            <div style="min-width: 250px;">
+              <h4 style="margin-bottom: 0.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                🛡️ Schema Deployability Validation
+              </h4>
+              <div>
+                Status: <span id="val-status-badge" class="badge badge-success" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-success); font-weight: bold; font-size: 0.85rem;">Checking...</span>
+              </div>
+              <p id="val-details-text" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.4;"></p>
+            </div>
+            <div style="flex: 1; min-width: 300px; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 2rem;">
+              <h4 style="margin-bottom: 0.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                ⚖️ Shared ServiceAccount Recommendations
+              </h4>
+              <ul id="splitting-recs-list" style="font-size: 0.85rem; color: var(--text-muted); padding-left: 1.25rem; line-height: 1.6; margin-top: 0.5rem;">
+                <li>No recommendations available. Load a scan.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="diff-grid">
+          <!-- Original Roles Panel -->
+          <div class="glass-panel diff-panel">
+            <div class="panel-sub-header">Original Role Manifest</div>
+            <div class="diff-body original" id="original-yaml-view">Loading original RBAC role...</div>
+          </div>
+          <!-- Minimized Roles Panel -->
+          <div class="glass-panel diff-panel">
+            <div class="panel-sub-header" style="border-bottom-color: var(--accent-success);">Minimized Role Manifest ($P_{min}$)</div>
+            <div class="diff-body" id="minimized-yaml-view">Loading minimized RBAC role...</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Details Side Drawer -->
+  <div id="details-drawer" class="drawer">
+    <div class="drawer-header">
+      <h3>Privilege Details</h3>
+      <button id="close-drawer-btn" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 1.25rem; line-height: 1;">&times;</button>
+    </div>
+    <div class="drawer-body" id="drawer-body-content">
+      <!-- Dynamic details here -->
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

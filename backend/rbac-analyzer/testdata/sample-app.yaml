@@ -1,0 +1,157 @@
+---
+# testdata/sample-app.yaml
+# A minimal 3-pod application used in M1 unit tests.
+# Covers: namespace Role, ClusterRole via RoleBinding, ClusterRoleBinding, wildcard verbs/resources.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sample-app
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: api-server-sa
+  namespace: sample-app
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: worker-sa
+  namespace: sample-app
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: logger-sa
+  namespace: sample-app
+
+---
+# Namespace-scoped Role for the API server
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: api-server-role
+  namespace: sample-app
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+
+---
+# ClusterRole with wildcard verbs — used to test Algorithm 1 expansion
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: worker-cluster-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["*"]  # should expand to all 12 verbs
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "delete", "get", "list"]
+
+---
+# ClusterRole for logger — minimal read-only
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: logger-cluster-role
+rules:
+  - apiGroups: [""]
+    resources: ["*"]           # wildcard resource — should expand to all core resources
+    verbs: ["get", "list"]
+
+---
+# RoleBinding: api-server-sa → api-server-role (namespace-scoped)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-server-binding
+  namespace: sample-app
+subjects:
+  - kind: ServiceAccount
+    name: api-server-sa
+    namespace: sample-app
+roleRef:
+  kind: Role
+  name: api-server-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# RoleBinding: worker-sa → worker-cluster-role via RoleBinding (scoped to namespace!)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: worker-rolebinding
+  namespace: sample-app
+subjects:
+  - kind: ServiceAccount
+    name: worker-sa
+    namespace: sample-app
+roleRef:
+  kind: ClusterRole
+  name: worker-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ClusterRoleBinding: logger-sa → logger-cluster-role (cluster-scoped)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: logger-cluster-binding
+subjects:
+  - kind: ServiceAccount
+    name: logger-sa
+    namespace: sample-app
+roleRef:
+  kind: ClusterRole
+  name: logger-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Pods
+apiVersion: v1
+kind: Pod
+metadata:
+  name: api-server
+  namespace: sample-app
+spec:
+  serviceAccountName: api-server-sa
+  containers:
+    - name: api
+      image: my-registry/api-server:latest
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: worker
+  namespace: sample-app
+spec:
+  serviceAccountName: worker-sa
+  containers:
+    - name: worker
+      image: my-registry/worker:latest
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: logger
+  namespace: sample-app
+spec:
+  serviceAccountName: logger-sa
+  containers:
+    - name: logger
+      image: my-registry/logger:latest

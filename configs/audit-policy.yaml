@@ -1,0 +1,14 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  - level: Metadata
+    verbs: ["get", "list", "watch"]
+    resources:
+      - group: ""
+        resources: ["secrets", "pods", "services"]
+      - group: "apps"
+        resources: ["deployments", "daemonsets", "statefulsets"]
+  - level: RequestResponse
+    verbs: ["create", "update", "patch", "delete"]
+  - level: None
+    users: ["system:kube-scheduler", "system:kube-controller-manager"]

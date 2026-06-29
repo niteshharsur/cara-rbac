@@ -1,0 +1,15 @@
+# ClusterRole for CARA-RBAC cluster-collector
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cara-rbac-collector
+rules:
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "clusterroles", "rolebindings", "clusterrolebindings"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts", "pods", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
