@@ -1,10 +1,11 @@
 [project]
-name = "behavior-analyzer"
+name = "fp-engine"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "psycopg2-binary>=2.9.9",
     "pydantic>=2.7.0",
-    "structlog>=24.2.0"
+    "structlog>=24.2.0",
 ]
 
 [project.optional-dependencies]
@@ -13,11 +14,11 @@ dev = [
 ]
 
 [project.scripts]
-behavior-analyzer = "behavior_analyzer.__main__:main"
+fp-engine = "fp_engine.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["behavior_analyzer"]
+packages = ["fp_engine"]
